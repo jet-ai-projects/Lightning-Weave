@@ -1,0 +1,977 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta property="og:title" content="Lightning Weave">
+<meta property="og:description" content="Two specialists each learned half of efficient reasoning. Weave both halves into one student.">
+<meta property="og:image" content="assets/teaser.png">
+<meta name="twitter:card" content="summary_large_image">
+<style>[hidden]{display:none!important}</style>
+<title>Lightning Weave</title>
+<meta name="description" content="Lightning Weave composes independently learned accuracy and efficiency capabilities into one reasoning model through offline on-policy distillation.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&family=JetBrains+Mono:wght@400;500;700&family=Manrope:wght@500;650;700;800&display=swap">
+<style>
+/* Layout: one centred project-page column under a floating pill nav; sections stacked on hairlines.
+   Light theme follows Physis-Lang (paper white, deep green), dark theme follows Long-WAM (film black, lime). */
+:root{
+  --bg:#ffffff; --bg2:#f3f7f4; --panel:#ffffff; --panel2:#f7faf8;
+  --ink:#16251f; --ink2:#33443b; --muted:#5f6f66; --dim:#8b978f;
+  --line:#dce5df; --line2:#c8d5cc;
+  --accent:#175c40; --accent-ink:#ffffff; --accent-soft:#e7f1eb; --glow:#76b900;
+  --ours:#4b8f0c; --base:#5b6670; --acc:#2f6db5; --eff:#d0701a; --ext:#a7b1ab; --naive:#dc4f3b;
+  --seg1:#cfe4b4; --seg2:#a6cf74; --seg3:#76b13a; --seg4:#3f7d10;
+  --title-grad:linear-gradient(180deg,#2f8a45 0%,#175c40 58%,#0e4430 100%);
+  --nav-bg:rgba(255,255,255,.84); --shadow:0 14px 40px rgba(22,56,34,.07);
+  --fig-bg:#ffffff; --code-bg:#f5f8f6;
+  --display:"Manrope","Avenir Next","Helvetica Neue",Arial,sans-serif;
+  --body:"DM Sans","Helvetica Neue",Arial,sans-serif;
+  --mono:"JetBrains Mono",ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+  --serif:Georgia,"Times New Roman",serif;
+  --wrap:1180px; --radius:16px;
+  color-scheme:light;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#030506; --bg2:#070b0d; --panel:#0b1114; --panel2:#0f171b;
+    --ink:#eef2ec; --ink2:#c8d1cb; --muted:#95a2a6; --dim:#5f6c70;
+    --line:rgba(236,242,234,.10); --line2:rgba(236,242,234,.18);
+    --accent:#b3ed55; --accent-ink:#081204; --accent-soft:rgba(179,237,85,.12); --glow:#b3ed55;
+    --ours:#b3ed55; --base:#8fa3ae; --acc:#7fb3e8; --eff:#e6b76a; --ext:#56636a; --naive:#f08a74;
+    --seg1:#2f4a18; --seg2:#4f7a22; --seg3:#7fb534; --seg4:#b3ed55;
+    --title-grad:linear-gradient(180deg,#e6ffb8 0%,#b3ed55 55%,#8fcf3c 100%);
+    --nav-bg:rgba(7,11,13,.74); --shadow:none;
+    --fig-bg:#f4f6f3; --code-bg:#0b1114;
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#030506; --bg2:#070b0d; --panel:#0b1114; --panel2:#0f171b;
+  --ink:#eef2ec; --ink2:#c8d1cb; --muted:#95a2a6; --dim:#5f6c70;
+  --line:rgba(236,242,234,.10); --line2:rgba(236,242,234,.18);
+  --accent:#b3ed55; --accent-ink:#081204; --accent-soft:rgba(179,237,85,.12); --glow:#b3ed55;
+  --ours:#b3ed55; --base:#8fa3ae; --acc:#7fb3e8; --eff:#e6b76a; --ext:#56636a; --naive:#f08a74;
+  --seg1:#2f4a18; --seg2:#4f7a22; --seg3:#7fb534; --seg4:#b3ed55;
+  --title-grad:linear-gradient(180deg,#e6ffb8 0%,#b3ed55 55%,#8fcf3c 100%);
+  --nav-bg:rgba(7,11,13,.74); --shadow:none;
+  --fig-bg:#f4f6f3; --code-bg:#0b1114;
+  color-scheme:dark;
+}
+
+*{box-sizing:border-box}
+html{scroll-behavior:smooth;scroll-padding-top:90px}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--body);font-size:17px;line-height:1.65;-webkit-font-smoothing:antialiased}
+a{color:var(--accent);text-decoration:none}
+a:hover{text-decoration:underline;text-underline-offset:3px}
+img{display:block;max-width:100%;height:auto}
+sup{font-size:.62em;line-height:0}
+button{font:inherit;color:inherit;cursor:pointer}
+:focus-visible{outline:2px solid var(--accent);outline-offset:3px;border-radius:6px}
+::selection{background:color-mix(in srgb,var(--glow) 35%,transparent)}
+.wrap{width:min(var(--wrap),100%);margin-inline:auto;padding-inline:max(20px,env(safe-area-inset-left,0px))}
+.narrow{width:min(880px,100%)}
+@media (prefers-reduced-motion: reduce){html{scroll-behavior:auto}*{transition:none!important;animation:none!important}}
+
+/* nav */
+.nav{position:fixed;top:calc(env(safe-area-inset-top,0px) + 12px);left:50%;transform:translateX(-50%);z-index:50;display:flex;align-items:center;gap:18px;
+  padding:8px 8px 8px 18px;border-radius:999px;border:1px solid var(--line2);background:var(--nav-bg);
+  backdrop-filter:blur(14px) saturate(1.3);-webkit-backdrop-filter:blur(14px) saturate(1.3);max-width:calc(100vw - 24px);box-shadow:var(--shadow)}
+.nav-brand{font-family:var(--display);font-weight:800;color:var(--accent);white-space:nowrap;letter-spacing:-.01em}
+.nav-links{display:flex;gap:16px;font-size:14px;overflow-x:auto;scrollbar-width:none;min-width:0}
+.nav-links::-webkit-scrollbar{display:none}
+.nav-links a{color:var(--muted);white-space:nowrap}
+.nav-links a:hover{color:var(--ink);text-decoration:none}
+.nav-tools{display:flex;gap:6px;align-items:center}
+.icon-btn{width:34px;height:34px;border-radius:50%;border:1px solid var(--line2);background:transparent;display:grid;place-items:center;color:var(--ink2)}
+.icon-btn:hover{border-color:var(--accent);color:var(--accent)}
+.icon-btn svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.nav-paper{font-size:13px;font-weight:600;padding:7px 14px;border-radius:999px;background:var(--accent);color:var(--accent-ink);white-space:nowrap}
+.nav-paper:hover{text-decoration:none;filter:brightness(1.08)}
+@media (max-width:760px){.nav-links{display:none}.nav{gap:12px}}
+
+/* hero */
+.hero{position:relative;overflow:hidden;padding:150px 0 70px;text-align:center;
+  background:radial-gradient(1100px 520px at 50% -8%,var(--accent-soft),transparent 62%),var(--bg)}
+#weave{position:absolute;inset:0;width:100%;height:100%;opacity:.42;
+  -webkit-mask-image:radial-gradient(ellipse 62% 58% at 50% 44%,transparent 0%,transparent 52%,#000 92%);
+          mask-image:radial-gradient(ellipse 62% 58% at 50% 44%,transparent 0%,transparent 52%,#000 92%)}
+.hero::after{content:"";position:absolute;left:0;right:0;bottom:0;height:140px;background:linear-gradient(180deg,transparent,var(--bg));pointer-events:none}
+.hero-inner{position:relative;z-index:1}
+.eyebrow{font:13px var(--mono);letter-spacing:.3em;text-transform:uppercase;color:var(--muted);margin:0 0 22px}
+.brand{display:block;font-family:var(--display);font-weight:800;font-size:clamp(54px,10vw,128px);line-height:1;letter-spacing:-.045em;
+  background:var(--title-grad);-webkit-background-clip:text;background-clip:text;color:transparent;padding-bottom:.08em}
+.subtitle{display:block;margin:18px auto 0;max-width:900px;font-family:var(--display);font-weight:700;font-size:clamp(22px,3vw,36px);line-height:1.22;letter-spacing:-.02em;color:var(--ink);text-wrap:balance}
+.authors{margin:34px 0 0;font-size:clamp(16px,1.6vw,19px);color:var(--ink2)}
+.authors span{display:inline-block;margin:0 12px;white-space:nowrap}
+.authors sup{color:var(--accent);margin-left:2px}
+.affils{margin:12px 0 0;display:flex;flex-wrap:wrap;justify-content:center;gap:8px 34px;font-family:var(--display);font-weight:750;font-size:clamp(17px,1.9vw,22px)}
+.affils sup{color:var(--accent)}
+.links{margin:30px 0 0;display:flex;flex-wrap:wrap;justify-content:center;gap:10px}
+.btn{position:relative;display:inline-flex;align-items:center;gap:9px;padding:10px 20px;border-radius:999px;border:1px solid var(--line2);background:var(--panel);
+  color:var(--ink);font-size:15px;font-weight:600;transition:transform .2s,border-color .2s,background .2s}
+.btn:hover{text-decoration:none;transform:translateY(-2px);border-color:var(--accent);background:var(--accent-soft)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.btn.primary:hover{background:var(--accent);filter:brightness(1.08)}
+.btn svg{width:17px;height:17px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.btn .hf{font-size:17px;line-height:1}
+.thesis{margin:46px auto 0;font-family:var(--serif);font-size:clamp(20px,2.3vw,26px);line-height:1.5;color:var(--ink);max-width:760px}
+.thesis em{color:var(--accent);font-style:italic}
+
+/* sections */
+.section{padding-block:clamp(64px,9vw,110px);position:relative}
+.section+.section{border-top:1px solid var(--line)}
+.band{background:var(--bg2)}
+.head{margin-bottom:34px;max-width:900px}
+.kicker{font:13px var(--mono);letter-spacing:.28em;text-transform:uppercase;color:var(--accent);margin:0 0 12px}
+h2{font-family:var(--display);font-size:clamp(28px,4vw,46px);line-height:1.1;letter-spacing:-.03em;margin:0;font-weight:750;text-wrap:balance}
+h3{font-family:var(--display);font-size:18px;margin:0;font-weight:700;letter-spacing:-.01em}
+.lead{color:var(--ink2);font-size:clamp(17px,1.6vw,19px);margin:16px 0 0;max-width:820px}
+.fine{color:var(--muted);font-size:13.5px;line-height:1.55;margin:14px 0 0}
+.mt{margin-top:22px}
+
+/* TL;DR + stats */
+.tldr{font-size:clamp(18px,1.9vw,21px);line-height:1.6;margin:0 0 36px;max-width:980px;color:var(--ink2)}
+.tag{display:inline-block;font:12px var(--mono);letter-spacing:.2em;color:var(--accent-ink);background:var(--accent);padding:4px 9px;border-radius:6px;margin-right:12px;vertical-align:3px}
+.stats{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:14px}
+.stat{position:relative;overflow:hidden;padding:22px 18px 20px;border-radius:var(--radius);border:1px solid var(--line);background:linear-gradient(180deg,var(--panel2),var(--panel));box-shadow:var(--shadow)}
+.stat::before{content:"";position:absolute;left:0;top:0;right:0;height:2px;background:linear-gradient(90deg,var(--glow),transparent)}
+.stat b{display:block;font-family:var(--display);font-size:clamp(28px,2.9vw,38px);font-weight:500;letter-spacing:-.04em;line-height:1;color:var(--accent);font-variant-numeric:tabular-nums}
+.stat b small{font-size:.5em;margin-left:2px;letter-spacing:0;color:var(--muted)}
+.stat span{display:block;margin-top:12px;font-weight:600;font-size:15px;line-height:1.35}
+.stat em{display:block;font-style:normal;color:var(--muted);font-size:12.5px;margin-top:5px;line-height:1.4}
+@media (max-width:1060px){.stats{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media (max-width:560px){.stats{grid-template-columns:repeat(2,minmax(0,1fr))}}
+
+/* overview video */
+.film{margin:0;border:1px solid var(--line);border-radius:var(--radius);overflow:hidden;background:#fefefe;box-shadow:var(--shadow)}
+.film video{display:block;width:100%;height:auto;aspect-ratio:16/9;background:#fefefe}
+
+/* figures */
+.figure{margin:0;border:1px solid var(--line);border-radius:var(--radius);background:var(--fig-bg);padding:clamp(12px,2vw,22px);box-shadow:var(--shadow)}
+.figure a{display:block}
+.figcap{color:var(--muted);font-size:13.5px;line-height:1.55;margin:12px 2px 0}
+.figcap b{color:var(--ink);font-weight:600}
+
+.abstract{font-size:17.5px;line-height:1.78;color:var(--ink2);margin:0}
+.abstract b{color:var(--ink)}
+
+/* method pipeline */
+.pipeline{display:grid;grid-template-columns:1fr 26px 1.15fr 26px 1.1fr 26px 1fr 26px 1fr;gap:6px;padding:20px;border-radius:var(--radius);border:1px solid var(--line);
+  background:radial-gradient(700px 240px at 50% 0%,var(--accent-soft),transparent),var(--panel);box-shadow:var(--shadow)}
+.pnode{border-radius:12px;border:1px solid var(--line2);background:var(--bg);padding:15px;display:flex;flex-direction:column;gap:6px;min-height:176px;min-width:0}
+.pnode .pl{font:12px var(--mono);letter-spacing:.28em;text-transform:uppercase;color:var(--accent);margin-bottom:auto}
+.pnode b{font-family:var(--display);font-size:16px;font-weight:700}
+.pnode em{font-style:normal;color:var(--muted);font-size:13px;line-height:1.45}
+.pnode.key{border-color:color-mix(in srgb,var(--accent) 55%,transparent);background:var(--accent-soft)}
+.parrow{align-self:center;justify-self:center;width:100%;height:2px;background:var(--line2);position:relative}
+.parrow::after{content:"";position:absolute;right:-1px;top:-4px;border:5px solid transparent;border-left:7px solid var(--line2);border-right:0}
+.ptiles{display:flex;gap:3px;margin:4px 0 6px}
+.ptiles i{flex:1;height:16px;border-radius:3px}
+.pairs{display:grid;gap:6px;margin:2px 0 6px}
+.pair{display:flex;align-items:center;gap:6px;font:12px var(--mono);color:var(--ink2)}
+.pair i{width:10px;height:10px;border-radius:3px;flex:none}
+.hist{display:flex;align-items:flex-end;gap:10px;height:46px;margin:6px 0 8px}
+.hist>span:not(.to){display:flex;align-items:flex-end;gap:3px;height:100%}
+.hist i{width:9px;border-radius:2px 2px 0 0;background:var(--ext)}
+.hist .q i{background:var(--ours)}
+.hist .to{color:var(--muted);font-size:14px;align-self:center}
+@media (max-width:980px){
+  .pipeline{grid-template-columns:1fr}
+  .parrow{width:2px;height:22px}
+  .parrow::after{right:-4px;top:auto;bottom:-2px;border:5px solid transparent;border-top:7px solid var(--line2);border-bottom:0}
+  .pnode{min-height:0}
+}
+.steps{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;margin-top:22px}
+.step{border:1px solid var(--line);border-radius:var(--radius);background:var(--panel);padding:22px 22px 18px;min-width:0;box-shadow:var(--shadow)}
+.step .n{display:inline-grid;place-items:center;width:28px;height:28px;border-radius:50%;background:var(--accent-soft);color:var(--accent);font:600 13px var(--mono);margin-bottom:12px}
+.step p{margin:8px 0 0;color:var(--ink2);font-size:15.5px;line-height:1.7}
+.eq{overflow-x:auto;overflow-y:hidden;margin:12px 0 2px;padding:10px 12px;border-radius:10px;background:var(--bg2);color:var(--ink);font-size:16px;text-align:center}
+.eq mjx-container{margin:0!important}
+@media (max-width:760px){.steps{grid-template-columns:1fr}}
+
+/* cards, tabs, legend */
+.card{border:1px solid var(--line);border-radius:var(--radius);background:var(--panel);padding:20px 20px 18px;min-width:0;box-shadow:var(--shadow)}
+.card-h{display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:8px 14px;margin-bottom:12px}
+.pill{font:12.5px var(--mono);padding:4px 10px;border-radius:999px;background:var(--accent-soft);color:var(--accent);white-space:nowrap}
+.muted{color:var(--muted);font-size:13px}
+.grid2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
+@media (max-width:900px){.grid2{grid-template-columns:1fr}}
+.seg{display:inline-flex;flex-wrap:wrap;gap:4px;padding:4px;border-radius:999px;border:1px solid var(--line2);background:var(--bg2)}
+.seg button{border:0;background:transparent;padding:6px 14px;border-radius:999px;font-size:13.5px;font-weight:600;color:var(--muted)}
+.seg button[aria-pressed="true"],.seg button[aria-selected="true"]{background:var(--panel);color:var(--ink);box-shadow:0 0 0 1px var(--line2)}
+.legend{display:flex;flex-wrap:wrap;gap:8px 20px;font-size:13.5px;color:var(--ink2);margin:0 0 14px}
+.legend span{display:inline-flex;align-items:center;gap:8px}
+.k{width:12px;height:12px;display:inline-block;flex:none}
+.k.c{border-radius:50%}.k.s{border-radius:2px}
+.k.t{width:0;height:0;border-left:7px solid transparent;border-right:7px solid transparent;border-bottom:12px solid currentColor}
+.k.d{width:10px;height:10px;transform:rotate(45deg);border-radius:1px}
+.chart{width:100%;min-height:120px}
+.chart svg{display:block;overflow:visible}
+.chart text{font-family:var(--body)}
+.chart .ax{font:11.5px var(--mono);fill:var(--muted)}
+.chart .lbl{font-size:13px;fill:var(--ink2)}
+.chart .val{font:600 12px var(--mono)}
+.chart .grid{stroke:var(--line);stroke-width:1}
+.chart .axis{stroke:var(--line2);stroke-width:1}
+.readout{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-top:14px}
+.readout div{border:1px solid var(--line);border-radius:12px;padding:12px 14px;background:var(--bg2);min-width:0}
+.readout .lbl{font:11px var(--mono);letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+.readout b{display:block;font-family:var(--display);font-size:24px;font-weight:600;letter-spacing:-.02em;color:var(--ink);font-variant-numeric:tabular-nums;margin-top:2px}
+.readout b.good{color:var(--accent)}
+.readout em{display:block;font-style:normal;font-size:12.5px;color:var(--muted)}
+@media (max-width:700px){.readout{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.explorer .controls{display:flex;flex-wrap:wrap;align-items:center;gap:14px 26px;margin-bottom:10px}
+.slider{display:flex;align-items:center;gap:12px;flex:1 1 300px;min-width:0}
+.slider label{font:12px var(--mono);letter-spacing:.14em;text-transform:uppercase;color:var(--muted);white-space:nowrap}
+.slider input{flex:1;min-width:0;accent-color:var(--accent)}
+.slider output{font:600 15px var(--mono);color:var(--accent);min-width:3.6em;text-align:right}
+.note{margin:12px 0 0;font-size:15px;color:var(--ink2)}
+.note b{color:var(--accent);font-weight:600}
+
+/* tables */
+.table-wrap{overflow-x:auto;margin-top:6px}
+table{border-collapse:collapse;width:100%;font-size:14px;font-variant-numeric:tabular-nums;min-width:820px}
+th,td{padding:9px 10px;text-align:right;border-bottom:1px solid var(--line);white-space:nowrap}
+th:first-child,td:first-child{text-align:left}
+thead th{font:600 12px var(--mono);letter-spacing:.06em;color:var(--muted);text-transform:uppercase;border-bottom:1px solid var(--line2)}
+thead tr:first-child th{border-bottom:0;padding-bottom:0}
+td.best{font-weight:700;color:var(--ink)}
+tr.ours td{background:var(--accent-soft)}
+tr.ours td:first-child{color:var(--accent);font-weight:700;border-radius:8px 0 0 8px}
+tr.ours td:last-child{border-radius:0 8px 8px 0}
+td.sep,th.sep{border-left:1px solid var(--line)}
+
+/* bibtex + footer */
+.cite{position:relative;border:1px solid var(--line);border-radius:var(--radius);background:var(--code-bg);padding:22px}
+.cite pre{margin:0;overflow-x:auto;font:13.5px/1.7 var(--mono);color:var(--ink2)}
+.copy{position:absolute;top:14px;right:14px;border:1px solid var(--line2);border-radius:8px;background:var(--panel);color:var(--accent);padding:6px 12px;font-size:13px;font-weight:600}
+.copy:hover{border-color:var(--accent)}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+footer{border-top:1px solid var(--line);padding-block:30px 40px;color:var(--muted);font-size:13px}
+footer .wrap{display:flex;flex-wrap:wrap;justify-content:space-between;gap:10px 24px}
+footer b{font-family:var(--display);color:var(--accent);font-weight:800}
+</style>
+</head>
+<body>
+
+
+<nav class="nav" aria-label="Sections">
+  <a class="nav-brand" href="#top">Lightning Weave</a>
+  <div class="nav-links">
+    <a href="#video">Video</a><a href="#tldr">TL;DR</a><a href="#method">Method</a><a href="#tilted">Tilted target</a><a href="#results">Results</a><a href="#frontier">Frontier</a><a href="#analysis">Analysis</a><a href="#bibtex">BibTeX</a>
+  </div>
+  <div class="nav-tools">
+    <a class="icon-btn" href="https://github.com/jet-ai-projects/Lightning-Weave" target="_blank" rel="noopener" aria-label="Code on GitHub">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m8 7-5 5 5 5"/><path d="m16 7 5 5-5 5"/></svg>
+    </a>
+    <button class="icon-btn" id="themeBtn" type="button" aria-label="Switch between light and dark theme">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>
+    </button>
+    <a class="nav-paper" href="https://arxiv.org/abs/2609.14708" target="_blank" rel="noopener">Paper ↗</a>
+  </div>
+</nav>
+
+<header class="hero" id="top">
+  <canvas id="weave" aria-hidden="true"></canvas>
+  <div class="wrap hero-inner">
+    <p class="eyebrow">Efficient reasoning · on-policy distillation</p>
+    <h1 style="margin:0">
+      <span class="brand">Lightning Weave</span>
+      <span class="subtitle">Improving the Accuracy–Efficiency Frontier of Reasoning Models through Capability Composition</span>
+    </h1>
+    <p class="authors"><span>Yecheng Wu<sup>1</sup></span><span>Song Han<sup>1,2</sup></span><span>Han Cai<sup>2</sup></span></p>
+    <p class="affils"><span><sup>1</sup> MIT</span><span><sup>2</sup> NVIDIA</span></p>
+    <div class="links">
+      <a class="btn primary" href="https://arxiv.org/abs/2609.14708" target="_blank" rel="noopener">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 3h7l5 5v13H7z"/><path d="M14 3v5h5"/></svg>arXiv 2609.14708</a>
+      <a class="btn" href="https://arxiv.org/pdf/2609.14708" target="_blank" rel="noopener">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v11"/><path d="m7 10 5 5 5-5"/><path d="M5 20h14"/></svg>PDF</a>
+      <a class="btn" href="https://github.com/jet-ai-projects/Lightning-Weave" target="_blank" rel="noopener">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m8 7-5 5 5 5"/><path d="m16 7 5 5-5 5"/></svg>Code</a>
+      <a class="btn" href="https://huggingface.co/papers/2609.14708" target="_blank" rel="noopener"><span class="hf" aria-hidden="true">🤗</span>Hugging Face</a>
+      <a class="btn" href="#video">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg>Watch the video</a>
+      <a class="btn" href="#bibtex">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 4h12v16l-6-4-6 4z"/></svg>BibTeX</a>
+    </div>
+    <p class="thesis">Two specialists each learned half of efficient reasoning.<br><em>Weave both halves into one student.</em></p>
+  </div>
+</header>
+
+<main>
+<section class="section" id="video">
+  <div class="wrap">
+    <div class="head"><p class="kicker">Overview · 1 min</p><h2>The paper in one minute.</h2></div>
+    <figure class="film">
+      <video controls playsinline preload="metadata" poster="assets/video_poster.jpg" width="1920" height="1080" aria-label="One-minute overview of Lightning Weave, built from the talk slides">
+        <source src="assets/lightning_weave.mp4" type="video/mp4">
+        Your browser cannot play this video. <a href="assets/lightning_weave.mp4">Open the MP4</a>.
+      </video>
+    </figure>
+    <p class="fine">Animated from the talk slides. No sound.</p>
+  </div>
+</section>
+
+<section class="section" id="tldr">
+  <div class="wrap">
+    <p class="tldr"><span class="tag">TL;DR</span>Lightning Weave takes what independently post-trained specialists already learned, an accuracy shift from Klear and an efficiency shift from DECS, and composes them at every token of the student's own reasoning. A tilted target keeps offline training stable, so each anchor pair scores the data once and the student then trains alone. On all five students tested, the result is more accurate and shorter than the base model.</p>
+    <div class="stats">
+      <div class="stat"><b>+9.70<small>pts</small></b><span>Average accuracy</span><em>Qwen3.5-4B · 55.16 → 64.86 over five benchmarks</em></div>
+      <div class="stat"><b>−19.7<small>%</small></b><span>Response tokens</span><em>Qwen3-4B · 15,723 → 12,628</em></div>
+      <div class="stat"><b>64.0<small>%</small></b><span>HMMT 2025</span><em>Qwen3.5-4B · from 59.2%, with 10.7% fewer tokens</em></div>
+      <div class="stat"><b>54.2<small>%</small></b><span>LiveCodeBench v5</span><em>Qwen3.5-4B · from 41.7%, with 9.6% fewer tokens</em></div>
+      <div class="stat"><b>5<small>/ 5</small></b><span>Best AES</span><em>every student, vs. base and single-anchor policies</em></div>
+      <div class="stat"><b>1.84<small>×</small></b><span>Fewer GPU-hours</span><em>than online DOPD · Qwen3-4B, two anchors</em></div>
+    </div>
+    <figure class="figure mt" style="margin-top:28px">
+      <a href="assets/teaser.png" target="_blank" rel="noopener" aria-label="Open the teaser figure at full size"><img src="assets/teaser.png" width="2400" height="747" alt="Left: an accuracy-oriented and an efficiency-oriented anchor pair each isolate a capability, and Lightning Weave composes both into one student. Right: on Qwen3-4B-Thinking-2507, Lightning Weave students trace an HMMT 2025 accuracy-efficiency frontier above the base model, both single-anchor policies and four other methods."></a>
+    </figure>
+    <p class="figcap"><b>Figure 1 of the paper.</b> Left: each anchor pair isolates one capability, and Lightning Weave composes both into a single student. Right: on Qwen3-4B-Thinking-2507, changing the relative strength of the two capabilities traces an HMMT 2025 frontier.</p>
+  </div>
+</section>
+
+<section class="section band" id="abstract">
+  <div class="wrap narrow">
+    <p class="kicker">Abstract</p>
+    <p class="abstract">A core goal of efficient reasoning is to improve the accuracy–efficiency frontier. However, jointly improving reasoning accuracy and inference efficiency can be challenging, as the two objectives can favor different reasoning behaviors. Independently post-trained models already offer distinct strengths in accuracy and efficiency. We introduce <b>Lightning Weave</b>, a post-training framework that extracts and composes these independently learned capabilities in a single student through on-policy distillation. Each acquired capability is represented by the policy shift from the model before post-training to the resulting specialist. Lightning Weave combines aligned log-ratio shifts at shared student token states and uses Tilted-Target DOPD to convert the cached signals into a stable learning target. Each anchor pair scores the cached trajectories once, enabling subsequent student training without serving multiple live anchor models concurrently. Across diverse student models and benchmarks in mathematics and code, Lightning Weave substantially improves upon the base students and achieves a state-of-the-art accuracy–efficiency frontier. On Qwen3.5-4B, it raises HMMT 2025 accuracy from 59.2% to 64.0% with 10.7% fewer response tokens, and LiveCodeBench v5 accuracy from 41.7% to 54.2% with 9.6% fewer response tokens. Adjusting the relative strengths of the anchor signals yields a strong empirical accuracy–efficiency Pareto frontier.</p>
+  </div>
+</section>
+
+<section class="section" id="method">
+  <div class="wrap">
+    <div class="head"><p class="kicker">01 · Method</p><h2>Extract each skill. Weave it per token. Distill offline.</h2>
+      <p class="lead">Accuracy and efficiency pull reasoning in different directions, so training for both at once is hard. Specialists that already learned each one exist. Lightning Weave transfers what they learned through the student's own outputs, so the anchors can differ from the student in size and family.</p></div>
+    <div class="pipeline" aria-label="Lightning Weave pipeline: cached student rollouts, anchor pairs score once, shifts are woven per token, the behavior policy is tilted into a target, and the student fits it">
+      <div class="pnode"><span class="pl">Roll out</span><div class="ptiles" id="tilesRoll"></div><b>Student rollouts</b><em>sampled once from the initial student and cached</em></div>
+      <div class="parrow" aria-hidden="true"></div>
+      <div class="pnode key"><span class="pl">Extract</span>
+        <div class="pairs"><span class="pair"><i style="background:var(--acc)"></i>Klear-Reasoner-8B ÷ Qwen3-8B-Base</span><span class="pair"><i style="background:var(--eff)"></i>DECS-1.5B ÷ R1-Distill-1.5B</span></div>
+        <b>Anchor pairs score once</b><em>log-ratio of each specialist to its pre-training checkpoint</em></div>
+      <div class="parrow" aria-hidden="true"></div>
+      <div class="pnode"><span class="pl">Weave</span><div class="ptiles" id="tilesAcc"></div><div class="ptiles" id="tilesEff" style="margin-top:0"></div><div class="ptiles" id="tilesW" style="margin-top:0"></div><b>Composed shift</b><em>weighted sum at every shared token state</em></div>
+      <div class="parrow" aria-hidden="true"></div>
+      <div class="pnode key"><span class="pl">Tilt</span><div class="hist" aria-hidden="true"><span><i style="height:80%"></i><i style="height:50%"></i><i style="height:66%"></i><i style="height:28%"></i><i style="height:42%"></i></span><span class="to">→</span><span class="q"><i style="height:34%"></i><i style="height:95%"></i><i style="height:48%"></i><i style="height:18%"></i><i style="height:78%"></i></span></div><b>Explicit target</b><em>the behavior policy tilted by the composed shift</em></div>
+      <div class="parrow" aria-hidden="true"></div>
+      <div class="pnode"><span class="pl">Distill</span><div class="hist" aria-hidden="true"><span class="q"><i style="height:34%"></i><i style="height:95%"></i><i style="height:48%"></i><i style="height:18%"></i><i style="height:78%"></i></span></div><b>Student only</b><em>fits the target by KL; no anchor model is served during training</em></div>
+    </div>
+    <div class="steps">
+      <article class="step"><span class="n">1</span><h3>A capability is a policy shift</h3>
+        <p>Pair each specialist <i>π</i><sup>+</sup> with its checkpoint before post-training <i>π</i><sup>−</sup>. Their token-level log-ratio keeps what post-training changed and drops what the base already knew.</p>
+        <div class="eq">\[ r_i(a\mid s)=\log\frac{\pi_i^{+}(a\mid s)}{\pi_i^{-}(a\mid s)} \]</div></article>
+      <article class="step"><span class="n">2</span><h3>Weave the shifts at every token</h3>
+        <p>All anchor pairs score the same student rollouts, so their shifts line up token by token. Shifts that agree reinforce each other, conflicts are settled locally, and the weights set the balance.</p>
+        <div class="eq">\[ r_{\mathbf w}(a\mid s)=\sum_{i=1}^{K} w_i\, r_i(a\mid s),\qquad \textstyle\sum_i w_i = 1 \]</div></article>
+      <article class="step"><span class="n">3</span><h3>Tilted-Target DOPD</h3>
+        <p>The composed shift tilts the frozen behavior policy into one explicit target, and the student minimizes its KL to that target. The loss and gradient vanish once the student reaches it, which makes offline training stable.</p>
+        <div class="eq">\[ q_{\mathbf w}(a\mid s)=\frac{\pi_b(a\mid s)}{Z_{\mathbf w}(s)}\exp\!\Big(\frac{r_{\mathbf w}(a\mid s)}{\alpha}\Big) \]\[ \mathcal L(\theta)=\alpha\,\mathbb E_{s\sim d_{\pi_b}}\big[D_{\mathrm{KL}}(\pi_\theta\,\|\,q_{\mathbf w})\big] \]</div></article>
+      <article class="step"><span class="n">4</span><h3>Score once, train the student alone</h3>
+        <p>Online, two capabilities mean four anchor models served next to the student at every step. Here each pair scores the cached rollouts once, following <a href="https://arxiv.org/abs/2604.13010" target="_blank" rel="noopener">Lightning OPD</a>, and training needs only the student and the cached scores. One cache serves every weighting.</p>
+        <div class="eq" style="text-align:left;font-size:15px">Qwen3-4B, two anchors, 100 rounds: <b>9.58</b> GPU-h vs. 17.64 for online DOPD (1.84×).</div></article>
+    </div>
+    <figure class="figure mt" style="margin-top:28px">
+      <a href="assets/overview.png" target="_blank" rel="noopener" aria-label="Open the method overview at full size"><img src="assets/overview.png" width="2400" height="638" loading="lazy" alt="Method overview: the initial student's rollout is scored by accuracy- and efficiency-oriented anchor pairs, their per-token shifts are combined into a composed shift, and the composed shift tilts the reference policy into a target that the student fits by KL minimization."></a>
+    </figure>
+    <p class="figcap"><b>Figure 2 of the paper.</b> (1) Capability-specific policy shifts on shared student token states. (2) Statewise multi-anchor composition. (3) Tilted-target distillation.</p>
+  </div>
+</section>
+
+<section class="section" id="tilted">
+  <div class="wrap">
+    <div class="head"><p class="kicker">02 · Tilted target</p><h2>Cached shifts need a destination.</h2>
+      <p class="lead">Reusing DOPD's sampled-token objective on a fixed cache keeps pushing after the shift has been absorbed, because its KL penalty is estimated on cached actions that the student has moved away from. The tilted target gives training a fixed point. It matches online DOPD without serving any anchor.</p></div>
+    <div class="card">
+      <div class="card-h"><h3>Average over five benchmarks · Qwen3-4B</h3>
+        <div class="seg" role="tablist" aria-label="Anchor setting" id="tiltTabs">
+          <button type="button" role="tab" aria-selected="true" data-k="klear">Klear only</button>
+          <button type="button" role="tab" aria-selected="false" data-k="decs">DECS only</button>
+          <button type="button" role="tab" aria-selected="false" data-k="both">Klear + DECS</button>
+        </div></div>
+      <div class="chart" id="chartTilt" role="img"></div>
+      <p class="note" id="tiltNote"></p>
+    </div>
+    <p class="fine">From Table 4(a) of the paper. Matched student initialization, prompt sequence, trajectory budget and update budget within each setting. The dashed line marks the base model's 15,723 tokens.</p>
+  </div>
+</section>
+
+<section class="section band" id="results">
+  <div class="wrap">
+    <div class="head"><p class="kicker">03 · Main results</p><h2>More accurate and shorter, on every student.</h2>
+      <p class="lead">Klear + DECS at equal weights, on five students across Qwen3, Qwen3.5 and OLMo-3. Averages over AIME 2024, AIME 2025, HMMT 2025 and LiveCodeBench v5 and v6.</p></div>
+    <div class="card">
+      <div class="card-h"><div class="legend" style="margin:0"><span><i class="k c" style="background:var(--base)"></i>Base model</span><span><i class="k c" style="background:var(--ours)"></i>Lightning Weave</span></div>
+        <div class="seg" id="dumbSeg" aria-label="Metric">
+          <button type="button" aria-pressed="true" data-m="acc">Accuracy</button>
+          <button type="button" aria-pressed="false" data-m="tok">Response tokens</button>
+        </div></div>
+      <div class="chart" id="chartDumb" role="img"></div>
+    </div>
+    <div class="card mt">
+      <div class="card-h"><h3>Per-benchmark results</h3>
+        <div class="seg" role="tablist" aria-label="Student model" id="tableTabs"></div></div>
+      <div class="table-wrap" id="mainTable"></div>
+      <p class="fine">Acc. = mean accuracy (%), Avg@64 for math and Avg@4 for code. Tok. = mean response tokens. AES = accuracy–efficiency score against the base model. Bold marks the best value per column. From Table 1 of the paper.</p>
+    </div>
+  </div>
+</section>
+
+<section class="section" id="frontier">
+  <div class="wrap">
+    <div class="head"><p class="kicker">04 · Frontier</p><h2>Turn one weight, choose the operating point.</h2>
+      <p class="lead">Each weight is one student trained from the same cache. More DECS weight shortens responses, and the middle weights keep or raise accuracy. The non-dominated students trace a Pareto frontier over the base, both single anchors and four other methods.</p></div>
+    <div class="card explorer">
+      <div class="controls">
+        <div class="seg" role="tablist" aria-label="Benchmark" id="benchTabs">
+          <button type="button" role="tab" aria-selected="true" data-b="0">AIME 2024</button>
+          <button type="button" role="tab" aria-selected="false" data-b="1">AIME 2025</button>
+          <button type="button" role="tab" aria-selected="false" data-b="2">HMMT 2025</button>
+        </div>
+        <div class="slider"><label for="rho">DECS weight</label><input type="range" id="rho" min="0" max="4" step="1" value="3" aria-describedby="rhoOut"><output id="rhoOut">0.625</output></div>
+      </div>
+      <div class="legend"><span><i class="k c" style="background:var(--ours)"></i>Lightning Weave</span><span><i class="k d" style="background:var(--base)"></i>Base</span><span style="color:var(--acc)"><i class="k t"></i><span style="color:var(--ink2)">Klear only</span></span><span><i class="k s" style="background:var(--eff)"></i>DECS only</span><span><i class="k c" style="background:var(--ext)"></i>Other methods</span></div>
+      <div class="chart" id="chartFront" role="img"></div>
+      <div class="readout" id="frontRead"></div>
+      <p class="note" id="frontNote"></p>
+    </div>
+    <p class="fine">Qwen3-4B-Thinking-2507, from Table 2 of the paper. Other methods: SimpleSD, Qwen3-4B-Thinking-2507-Art, PromptCoT 2.0 and model interpolation (MI, λ = 0.8). The 0.5 student is the one in the main results. Solid line: non-dominated students; dashed: dominated ones.</p>
+  </div>
+</section>
+
+<section class="section band" id="budget">
+  <div class="wrap">
+    <div class="head"><p class="kicker">05 · Token budgets</p><h2>Largest gains when tokens are scarce.</h2>
+      <p class="lead">Every AIME 2024 response is cut at 4K, 8K and 16K tokens and graded again. Lightning Weave leads at every cap, by 6 or more points over the better single anchor up to 16K.</p></div>
+    <div class="card">
+      <div class="card-h"><div class="legend" style="margin:0"><span><i class="k d" style="background:var(--base)"></i>Base</span><span style="color:var(--acc)"><i class="k t"></i><span style="color:var(--ink2)">Klear only</span></span><span><i class="k s" style="background:var(--eff)"></i>DECS only</span><span><i class="k c" style="background:var(--ours)"></i>Lightning Weave</span></div><span class="pill">+11.4 pts at 8K</span></div>
+      <div class="chart" id="chartBudget" role="img"></div>
+    </div>
+    <p class="fine">Qwen3-4B-Thinking-2507, 64 samples on each of the 30 problems. Responses are truncated with the Qwen3 tokenizer and re-graded with the same answer checker. The 32K point is the original evaluation. From Figure 3(c) of the paper.</p>
+  </div>
+</section>
+
+<section class="section" id="analysis">
+  <div class="wrap">
+    <div class="head"><p class="kicker">06 · Analysis</p><h2>Weaving beats mixing and sequencing, and takes more anchors.</h2></div>
+    <div class="grid2">
+      <div class="card">
+        <div class="card-h"><h3>How to combine two anchors</h3><span class="pill">AES 0.41</span></div>
+        <div class="chart" id="chartComp" role="img"></div>
+        <p class="note">Against data mixture: <b>+1.24 points</b> with <b>7.1% fewer tokens</b>. Sequential training is order-sensitive, and whichever anchor goes last wins.</p>
+        <p class="fine">Qwen3-4B, matched data and updates. From Table 4(b) of the paper.</p>
+      </div>
+      <div class="card">
+        <div class="card-h"><h3>Adding MiMo-RL as a third anchor</h3><span class="pill">62.50% · AES 0.42</span></div>
+        <div class="chart" id="chartAnchors" role="img"></div>
+        <p class="note">All three anchors: <b>+6.6 points</b> over the base with <b>5.4% fewer tokens</b>. Adding an anchor moves the student toward that anchor's capability.</p>
+        <p class="fine">Qwen3-4B, equal weights. From Table 3 of the paper.</p>
+      </div>
+    </div>
+    <div class="card mt">
+      <div class="card-h"><h3>Training cost, GPU-hours for one composition</h3><span class="pill">1.70–2.18× cheaper</span></div>
+      <div class="legend"><span><i class="k s" style="background:var(--base)"></i>Online DOPD</span><span><i class="k s" style="background:var(--seg1)"></i>Rollouts</span><span><i class="k s" style="background:var(--seg2)"></i>Student-reference scoring</span><span><i class="k s" style="background:var(--seg3)"></i>Anchor scoring</span><span><i class="k s" style="background:var(--seg4)"></i>Student-only training</span></div>
+      <div class="chart" id="chartCost" role="img"></div>
+      <p class="fine">100-round settings; CPU target construction excluded. From Table 6 of the paper.</p>
+    </div>
+  </div>
+</section>
+
+<section class="section band" id="bibtex">
+  <div class="wrap">
+    <div class="head"><p class="kicker">Citation</p><h2>BibTeX</h2></div>
+    <div class="cite">
+      <button class="copy" id="copyBib" type="button">Copy</button>
+<pre id="bib">@article{wu2026lightningweave,
+  title={Lightning Weave: Improving the Accuracy-Efficiency Frontier of Reasoning Models through Capability Composition},
+  author={Wu, Yecheng and Han, Song and Cai, Han},
+  journal={arXiv preprint arXiv:2609.14708},
+  year={2026}
+}</pre>
+      <span class="sr" id="copyStatus" role="status"></span>
+    </div>
+  </div>
+</section>
+</main>
+
+<footer>
+  <div class="wrap"><span><b>Lightning Weave</b> · MIT and NVIDIA</span><span><a href="https://arxiv.org/abs/2609.14708" target="_blank" rel="noopener">arXiv</a> · <a href="https://github.com/jet-ai-projects/Lightning-Weave" target="_blank" rel="noopener">GitHub</a> · <a href="https://huggingface.co/papers/2609.14708" target="_blank" rel="noopener">Hugging Face</a> · Every number here comes from the paper.</span></div>
+</footer>
+
+<script>
+window.MathJax = { tex: { inlineMath: [["\\(", "\\)"]], displayMath: [["\\[", "\\]"]] }, svg: { fontCache: "global" }, options: { enableMenu: false } };
+</script>
+<script src="https://cdn.jsdelivr.net/npm/mathjax@3.2.2/es5/tex-svg.js" defer></script>
+<script>
+(function () {
+  "use strict";
+  /* ---------------------------------------------------------- data (paper tables) */
+  const BENCH = ["AIME 2024", "AIME 2025", "HMMT 2025", "LCB v5", "LCB v6"];
+  // Table 1: per policy, [acc, tok] for each benchmark, then [avgAcc, avgTok, AES].
+  const MAIN = {
+    "Qwen3-1.7B": {
+      "Base": [[45.8, 17564], [40.4, 17537], [21.7, 17570], [35.1, 14796], [30.3, 14409], [34.66, 16375, 0.00]],
+      "Klear-only": [[53.2, 18457], [41.7, 19178], [24.1, 19751], [38.3, 15131], [31.9, 15198], [37.84, 17543, 0.20]],
+      "DECS-only": [[46.2, 14558], [34.9, 14534], [20.9, 14160], [33.1, 13406], [30.5, 13039], [33.12, 13939, -0.08]],
+      "Lightning Weave": [[55.1, 15289], [40.8, 16151], [22.9, 15855], [38.1, 14284], [32.8, 13680], [37.94, 15052, 0.34]] },
+    "Qwen3-4B": {
+      "Base": [[72.9, 14641], [65.4, 17844], [41.4, 17626], [53.0, 13843], [46.8, 14663], [55.90, 15723, 0.00]],
+      "Klear-only": [[75.8, 15061], [71.3, 17715], [45.6, 18230], [57.4, 13252], [49.6, 13776], [59.94, 15607, 0.23]],
+      "DECS-only": [[68.3, 10918], [60.6, 12429], [35.0, 11862], [53.0, 12531], [46.2, 13437], [52.62, 12235, -0.09]],
+      "Lightning Weave": [[76.0, 11521], [70.1, 13816], [43.0, 13743], [59.2, 11702], [51.3, 12357], [59.92, 12628, 0.41]] },
+    "Qwen3-4B-Thinking-2507": {
+      "Base": [[77.9, 19442], [73.9, 21170], [51.7, 23906], [65.5, 16693], [53.4, 18105], [64.47, 19863, 0.00]],
+      "Klear-only": [[83.0, 18128], [78.5, 19792], [56.1, 23377], [66.4, 17853], [56.7, 19487], [68.16, 19727, 0.18]],
+      "DECS-only": [[79.0, 17680], [75.5, 19460], [50.4, 21369], [63.9, 16004], [53.2, 17390], [64.40, 18381, 0.04]],
+      "Lightning Weave": [[85.3, 16003], [80.4, 17970], [54.4, 20440], [68.1, 17216], [56.5, 18790], [68.94, 18084, 0.28]] },
+    "Qwen3.5-4B": {
+      "Base": [[72.9, 18316], [63.5, 20322], [59.2, 26481], [41.7, 31287], [38.5, 30789], [55.16, 25439, 0.00]],
+      "Klear-only": [[78.2, 21522], [66.7, 23346], [56.7, 27096], [51.2, 29891], [46.8, 29638], [59.92, 26299, 0.25]],
+      "DECS-only": [[64.2, 15052], [55.8, 17335], [52.1, 22228], [52.4, 26549], [45.8, 27091], [54.06, 21651, 0.06]],
+      "Lightning Weave": [[84.2, 18900], [74.6, 20758], [64.0, 23635], [54.2, 28294], [47.3, 28841], [64.86, 24086, 0.61]] },
+    "OLMo-3-7B-Think": {
+      "Base": [[73.5, 17521], [65.3, 19247], [44.4, 20960], [52.1, 22377], [46.6, 22679], [56.38, 20557, 0.00]],
+      "Klear-only": [[77.6, 16787], [72.3, 18553], [50.3, 23976], [55.0, 23794], [47.5, 24677], [60.54, 21557, 0.18]],
+      "DECS-only": [[70.1, 13497], [61.9, 14528], [39.2, 16076], [52.2, 20857], [47.7, 21673], [54.22, 17326, -0.04]],
+      "Lightning Weave": [[77.9, 13196], [69.2, 14545], [46.1, 16487], [58.0, 22404], [49.4, 22873], [60.12, 17901, 0.34]] },
+  };
+  const STUDENTS = Object.keys(MAIN);
+  const POLICIES = ["Base", "Klear-only", "DECS-only", "Lightning Weave"];
+
+  // Table 2: Qwen3-4B-Thinking-2507, [acc, tok] on AIME 2024, AIME 2025, HMMT 2025.
+  const RHO = [0.25, 0.375, 0.5, 0.625, 0.75];
+  const FR = {
+    base: [[77.9, 19442], [73.9, 21170], [51.7, 23906]],
+    klear: [[83.0, 18128], [78.5, 19792], [56.1, 23377]],
+    decs: [[79.0, 17680], [75.5, 19460], [50.4, 21369]],
+    weave: [
+      [[83.8, 17474], [78.5, 19300], [55.6, 22774]],
+      [[85.1, 17038], [79.3, 18760], [56.6, 22197]],
+      [[85.3, 16003], [80.4, 17970], [54.4, 20440]],
+      [[84.9, 15048], [80.4, 16963], [52.9, 18470]],
+      [[83.3, 14310], [79.6, 16409], [50.9, 16147]]],
+    ext: {
+      "SimpleSD": [[76.7, 19473], [75.2, 21157], [51.0, 24053]],
+      "Art": [[78.5, 15456], [76.3, 17703], [49.4, 17339]],
+      "PromptCoT 2.0": [[75.8, 20177], [76.9, 21455], [54.0, 24838]],
+      "MI": [[83.1, 15885], [77.5, 17542], [52.3, 19653]] },
+  };
+  // label side per benchmark for the labelled points: r right, l left, t top, b bottom
+  const FR_LAB = [
+    { base: "t", klear: "r", decs: "r", "SimpleSD": "r", "Art": "r", "PromptCoT 2.0": "b", "MI": "b" },
+    { base: "b", klear: "r", decs: "r", "SimpleSD": "l", "Art": "b", "PromptCoT 2.0": "t", "MI": "l" },
+    { base: "t", klear: "r", decs: "r", "SimpleSD": "r", "Art": "r", "PromptCoT 2.0": "l", "MI": "b" },
+  ];
+  const FR_DOM = [[73, 87], [72, 82], [47.5, 58]];
+
+  // Table 4(a): avg accuracy, avg tokens.
+  const TILT = {
+    klear: { rows: [["Online DOPD", 59.96, 15887], ["Naive offline", 58.43, 20289], ["Tilted target (ours)", 59.94, 15607]],
+      note: "Naive offline writes <b>30% longer</b> responses than the tilted target and is <b>1.51 points</b> less accurate. The tilted target matches online DOPD in accuracy (59.94% vs. 59.96%)." },
+    decs: { rows: [["Online DOPD", 51.87, 11739], ["Naive offline", 48.77, 10628], ["Tilted target (ours)", 52.62, 12235]],
+      note: "Naive offline cuts tokens further but loses <b>3.85 points</b> to the tilted target, which is the most accurate of the three." },
+    both: { rows: [["Online DOPD", 60.93, 13935], ["Naive offline", 59.76, 15317], ["Tilted target (ours)", 59.92, 12628]],
+      note: "The tilted target uses <b>17.6% fewer tokens</b> than naive offline at slightly higher accuracy, and the fewest of all three. Online DOPD is 1.0 point more accurate but serves four anchor models during training." },
+  };
+  // Figure 3(c) / generation_cap_accuracy_aime24.csv: accuracy (%) at 4K, 8K, 16K, 32K.
+  const BUDGET = [
+    ["Base", "base", "d", [1.82, 18.70, 48.65, 77.92]],
+    ["Klear only", "acc", "t", [3.44, 22.71, 51.35, 83.02]],
+    ["DECS only", "eff", "s", [4.53, 23.28, 52.24, 78.96]],
+    ["Lightning Weave", "ours", "c", [10.63, 30.05, 58.54, 85.31]],
+  ];
+  // Table 4(b): AES, avg acc, avg tok.
+  const COMP = [["Data mixture", 0.29, 58.68, 13599], ["Klear → DECS", 0.31, 57.76, 12467], ["DECS → Klear", 0.37, 60.88, 14298], ["Lightning Weave", 0.41, 59.92, 12628]];
+  // Table 3: avg acc, avg tok; kind, colour, label side.
+  const ANCH = [
+    ["Base", 55.90, 15723, "d", "base", "r"], ["Klear", 59.94, 15607, "t", "acc", "r"], ["DECS", 52.62, 12235, "s", "eff", "r"],
+    ["MiMo-RL", 59.60, 17085, "t", "acc", "r"], ["Klear+DECS", 59.92, 12628, "c", "ours2", "b"], ["Klear+MiMo", 64.38, 18577, "c", "ext", "l"],
+    ["DECS+MiMo", 57.28, 13939, "c", "ext", "r"], ["All three", 62.50, 14875, "c", "ours", "t"]];
+  // Table 6: GPU-hours. [label, online, rollout, refScore, anchorScore, train, total, ratio]
+  // The paper's totals use unrounded stage costs, so the total is listed, not summed.
+  const COST = [
+    ["Qwen3-1.7B · 2 anchors", 15.65, 1.59, 0.49, 2.93, 2.17, 7.17, "2.18×"],
+    ["Qwen3-4B · 1 anchor", 15.49, 3.50, 0.62, 1.76, 2.43, 8.31, "1.86×"],
+    ["Qwen3-4B · 2 anchors", 17.64, 3.50, 0.62, 2.93, 2.53, 9.58, "1.84×"],
+    ["Qwen3-4B · 3 anchors", 19.66, 3.50, 0.62, 4.95, 2.48, 11.55, "1.70×"]];
+
+  /* ---------------------------------------------------------- svg helpers */
+  const NS = "http://www.w3.org/2000/svg";
+  const fmt = (v) => Math.round(v).toLocaleString("en-US");
+  function el(tag, a, parent) {
+    const e = document.createElementNS(NS, tag);
+    for (const k in a) {
+      if (k === "text") e.textContent = a[k];
+      else if (k === "css") e.setAttribute("style", a[k]);
+      else e.setAttribute(k, a[k]);
+    }
+    if (parent) parent.appendChild(e);
+    return e;
+  }
+  function canvasFor(box, h) {
+    box.textContent = "";
+    const w = Math.max(280, Math.floor(box.clientWidth || 600));
+    const s = el("svg", { width: w, height: h, viewBox: `0 0 ${w} ${h}` }, box);
+    return [s, w];
+  }
+  const col = (k) => `var(--${k})`;
+  function mark(g, kind, x, y, r, c, ring) {
+    const css = `fill:${col(c)};stroke:${ring ? col(ring) : "var(--panel)"};stroke-width:${ring ? 2 : 1.5}`;
+    if (kind === "c") return el("circle", { cx: x, cy: y, r, css }, g);
+    if (kind === "s") return el("rect", { x: x - r * .85, y: y - r * .85, width: r * 1.7, height: r * 1.7, rx: 1.5, css }, g);
+    if (kind === "t") return el("polygon", { points: `${x},${y - r * 1.15} ${x - r * 1.05},${y + r * .75} ${x + r * 1.05},${y + r * .75}`, css }, g);
+    return el("polygon", { points: `${x},${y - r * 1.2} ${x + r * 1.05},${y} ${x},${y + r * 1.2} ${x - r * 1.05},${y}`, css }, g);
+  }
+  function text(g, x, y, t, cls, css, anchor) {
+    return el("text", { x, y, class: cls || "lbl", "text-anchor": anchor || "start", css: css || "", text: t }, g);
+  }
+  function placeLabel(g, x, y, t, side, css) {
+    const d = 10;
+    if (side === "l") return text(g, x - d, y + 4, t, "lbl", css, "end");
+    if (side === "t") return text(g, x, y - d - 2, t, "lbl", css, "middle");
+    if (side === "b") return text(g, x, y + d + 11, t, "lbl", css, "middle");
+    return text(g, x + d, y + 4, t, "lbl", css, "start");
+  }
+  function ticks(lo, hi, step) { const o = []; for (let v = Math.ceil(lo / step) * step; v <= hi + 1e-9; v += step) o.push(+v.toFixed(6)); return o; }
+
+  /* ---------------------------------------------------------- 02 tilted target */
+  let tiltKey = "klear";
+  function drawTilt() {
+    const box = document.getElementById("chartTilt"), set = TILT[tiltKey];
+    const narrow = box.clientWidth < 560;
+    const rowH = narrow ? 64 : 52, top = 26, h = top + rowH * 3 + 34;
+    const [s, w] = canvasFor(box, h);
+    const nameW = narrow ? 0 : 190, accW = 84, x0 = nameW + 8, x1 = w - accW - 10;
+    const fx = (v) => x0 + (v / 22000) * (x1 - x0);
+    text(s, w, 14, "ACCURACY", "ax", "", "end");
+    text(s, x0, 14, "AVG RESPONSE TOKENS", "ax", "", "start");
+    ticks(0, 20000, 5000).forEach((v) => {
+      el("line", { x1: fx(v), x2: fx(v), y1: top - 4, y2: top + rowH * 3, class: "grid" }, s);
+      text(s, fx(v), top + rowH * 3 + 18, v ? `${v / 1000}K` : "0", "ax", "", "middle");
+    });
+    el("line", { x1: fx(15723), x2: fx(15723), y1: top - 8, y2: top + rowH * 3, css: "stroke:var(--base);stroke-width:1.5;stroke-dasharray:4 4" }, s);
+    const colors = ["base", "naive", "ours"];
+    set.rows.forEach(([name, acc, tok], i) => {
+      const y = top + i * rowH, ours = i === 2;
+      const by = narrow ? y + 26 : y + 12, bh = 26;
+      if (narrow) text(s, x0, y + 16, name, "lbl", ours ? "font-weight:700;fill:var(--accent)" : "");
+      else text(s, nameW, by + bh / 2 + 5, name, "lbl", ours ? "font-weight:700;fill:var(--accent)" : "", "end");
+      el("rect", { x: x0, y: by, width: Math.max(2, fx(tok) - x0), height: bh, rx: 4, css: `fill:${col(colors[i])}` }, s);
+      const inside = fx(tok) - x0 > 90;
+      text(s, inside ? fx(tok) - 8 : fx(tok) + 8, by + bh / 2 + 4, fmt(tok), "val", inside ? "fill:var(--bg)" : "fill:var(--ink)", inside ? "end" : "start");
+      text(s, w, by + bh / 2 + 5, `${acc.toFixed(2)}%`, "val", ours ? "fill:var(--accent);font-size:14px" : "fill:var(--ink);font-size:14px", "end");
+    });
+    box.setAttribute("aria-label", set.rows.map((r) => `${r[0]}: ${r[1]}% accuracy, ${fmt(r[2])} tokens`).join("; "));
+    document.getElementById("tiltNote").innerHTML = set.note;
+  }
+
+  /* ---------------------------------------------------------- 03 dumbbell + table */
+  let dumbMetric = "acc";
+  function drawDumb() {
+    const box = document.getElementById("chartDumb");
+    const narrow = box.clientWidth < 600;
+    const rowH = narrow ? 58 : 50, top = 12, h = top + rowH * STUDENTS.length + 40;
+    const [s, w] = canvasFor(box, h);
+    const nameW = narrow ? 0 : 200, x0 = nameW + 16, x1 = w - 70;
+    const acc = dumbMetric === "acc";
+    const dom = acc ? [30, 70] : [10000, 27000];
+    const fx = (v) => x0 + ((v - dom[0]) / (dom[1] - dom[0])) * (x1 - x0);
+    const tk = acc ? ticks(30, 70, 10) : ticks(10000, 26000, 4000);
+    tk.forEach((v) => {
+      el("line", { x1: fx(v), x2: fx(v), y1: top, y2: top + rowH * STUDENTS.length, class: "grid" }, s);
+      text(s, fx(v), top + rowH * STUDENTS.length + 18, acc ? `${v}%` : `${v / 1000}K`, "ax", "", "middle");
+    });
+    text(s, x1 + 60, top + rowH * STUDENTS.length + 36, acc ? "AVG ACCURACY →" : "← FEWER AVG TOKENS", "ax", "", "end");
+    const parts = [];
+    STUDENTS.forEach((n, i) => {
+      const b = MAIN[n]["Base"][5], wv = MAIN[n]["Lightning Weave"][5];
+      const vb = acc ? b[0] : b[1], vw = acc ? wv[0] : wv[1];
+      const y = top + i * rowH + (narrow ? 38 : rowH / 2);
+      if (narrow) text(s, x0, top + i * rowH + 16, n, "lbl", "font-weight:600");
+      else text(s, nameW, y + 4, n, "lbl", "", "end");
+      el("line", { x1: fx(vb), x2: fx(vw), y1: y, y2: y, css: "stroke:var(--ours);stroke-opacity:.35;stroke-width:6;stroke-linecap:round" }, s);
+      mark(s, "c", fx(vb), y, 6.5, "base");
+      mark(s, "c", fx(vw), y, 7.5, "ours");
+      const d = acc ? `+${(vw - vb).toFixed(2)}` : `−${((1 - vw / vb) * 100).toFixed(1)}%`;
+      const right = vw >= vb;
+      text(s, right ? fx(vw) + 14 : fx(vw) - 14, y + 4, d, "val", "fill:var(--accent)", right ? "start" : "end");
+      parts.push(`${n}: ${acc ? vb.toFixed(2) + "% to " + vw.toFixed(2) + "%" : fmt(vb) + " to " + fmt(vw) + " tokens"}`);
+    });
+    box.setAttribute("aria-label", parts.join("; "));
+  }
+  let tableStudent = "Qwen3.5-4B";
+  function drawTable() {
+    const T = MAIN[tableStudent];
+    const best = [];
+    for (let b = 0; b < 6; b++) {
+      const accs = POLICIES.map((p) => T[p][b][0]), toks = POLICIES.map((p) => T[p][b][1]);
+      best.push([Math.max(...accs), Math.min(...toks)]);
+    }
+    const bestAes = Math.max(...POLICIES.map((p) => T[p][5][2]));
+    let h = '<table><thead><tr><th rowspan="2">Policy</th>';
+    BENCH.forEach((b) => (h += `<th colspan="2" class="sep" style="text-align:center">${b}</th>`));
+    h += '<th colspan="3" class="sep" style="text-align:center">Average</th></tr><tr>';
+    for (let b = 0; b < 6; b++) h += '<th class="sep">Acc.</th><th>Tok.</th>';
+    h += "<th>AES</th></tr></thead><tbody>";
+    POLICIES.forEach((p) => {
+      const r = T[p];
+      h += `<tr class="${p === "Lightning Weave" ? "ours" : ""}"><td>${p}</td>`;
+      for (let b = 0; b < 6; b++) {
+        const a = r[b][0], t = r[b][1], dec = b === 5 ? 2 : 1;
+        h += `<td class="sep${a === best[b][0] ? " best" : ""}">${a.toFixed(dec)}</td><td class="${t === best[b][1] ? "best" : ""}">${fmt(t)}</td>`;
+      }
+      const aes = r[5][2];
+      h += `<td class="${aes === bestAes ? "best" : ""}">${aes < 0 ? "−" + Math.abs(aes).toFixed(2) : aes.toFixed(2)}</td></tr>`;
+    });
+    h += "</tbody></table>";
+    document.getElementById("mainTable").innerHTML = h;
+  }
+
+  /* ---------------------------------------------------------- 04 frontier explorer */
+  let bench = 0, rhoI = 3;
+  function dominated(i, b) {
+    const [a, t] = FR.weave[i][b];
+    return FR.weave.some((q, j) => j !== i && q[b][0] >= a && q[b][1] <= t && (q[b][0] > a || q[b][1] < t));
+  }
+  function drawFront() {
+    const box = document.getElementById("chartFront");
+    const narrow = box.clientWidth < 560;
+    const h = narrow ? 300 : 380, padL = 48, padR = 26, padT = 18, padB = 46;
+    const [s, w] = canvasFor(box, h);
+    const all = [FR.base, FR.klear, FR.decs, ...FR.weave, ...Object.values(FR.ext)].map((p) => p[bench][1]);
+    const xd = [Math.floor((Math.min(...all) - 700) / 1000) * 1000, Math.ceil((Math.max(...all) + 700) / 1000) * 1000];
+    const yd = FR_DOM[bench];
+    const fx = (v) => padL + ((v - xd[0]) / (xd[1] - xd[0])) * (w - padL - padR);
+    const fy = (v) => padT + (1 - (v - yd[0]) / (yd[1] - yd[0])) * (h - padT - padB);
+    ticks(yd[0], yd[1], 2).forEach((v) => { el("line", { x1: padL, x2: w - padR, y1: fy(v), y2: fy(v), class: "grid" }, s); text(s, padL - 8, fy(v) + 4, `${v}`, "ax", "", "end"); });
+    ticks(xd[0], xd[1], narrow ? 4000 : 2000).forEach((v) => text(s, fx(v), h - padB + 18, `${v / 1000}K`, "ax", "", "middle"));
+    el("line", { x1: padL, x2: w - padR, y1: h - padB, y2: h - padB, class: "axis" }, s);
+    text(s, w - padR, h - 8, "RESPONSE TOKENS →", "ax", "", "end");
+    text(s, padL, padT - 4, "ACCURACY (%)", "ax", "", "start");
+    const L = FR_LAB[bench];
+    Object.entries(FR.ext).forEach(([n, p]) => {
+      const x = fx(p[bench][1]), y = fy(p[bench][0]);
+      mark(s, "c", x, y, 5, "ext");
+      if (!narrow) placeLabel(s, x, y, n, L[n], "fill:var(--muted);font-size:12px");
+    });
+    [["base", "d", "base", "Base"], ["klear", "t", "acc", "Klear only"], ["decs", "s", "eff", "DECS only"]].forEach(([k, kind, c, n]) => {
+      const x = fx(FR[k][bench][1]), y = fy(FR[k][bench][0]);
+      mark(s, kind, x, y, 6.5, c);
+      if (!narrow) placeLabel(s, x, y, n, L[k], `fill:${col(c)};font-weight:600;font-size:12px`);
+    });
+    const pts = FR.weave.map((q, i) => ({ i, x: fx(q[bench][1]), y: fy(q[bench][0]), front: !dominated(i, bench), t: q[bench][1] })).sort((a, b) => a.t - b.t);
+    for (let k = 0; k < pts.length - 1; k++) {
+      const solid = pts[k].front && pts[k + 1].front;
+      el("line", { x1: pts[k].x, y1: pts[k].y, x2: pts[k + 1].x, y2: pts[k + 1].y, css: `stroke:var(--ours);stroke-width:${solid ? 3 : 1.75};${solid ? "" : "stroke-dasharray:5 5"}` }, s);
+    }
+    pts.forEach((p) => mark(s, "c", p.x, p.y, p.i === rhoI ? 7.5 : 5.5, "ours"));
+    const sel = pts.find((p) => p.i === rhoI);
+    el("circle", { cx: sel.x, cy: sel.y, r: 14, css: "fill:none;stroke:var(--ours);stroke-width:2" }, s);
+    const [sa, st] = FR.weave[rhoI][bench];
+    const labRight = sel.x < w * 0.62;
+    text(s, labRight ? sel.x + 18 : sel.x - 18, sel.y - 18, `${RHO[rhoI]} · ${sa.toFixed(1)}%`, "val", "fill:var(--accent);font-size:13px", labRight ? "start" : "end");
+    box.setAttribute("aria-label", `${["AIME 2024", "AIME 2025", "HMMT 2025"][bench]}: Lightning Weave with DECS weight ${RHO[rhoI]} reaches ${sa}% with ${fmt(st)} tokens; base ${FR.base[bench][0]}% with ${fmt(FR.base[bench][1])} tokens.`);
+    // readout
+    const [ba, bt] = FR.base[bench];
+    const da = sa - ba, dt = (st / bt - 1) * 100;
+    const beats = Object.values(FR.ext).filter((p) => sa > p[bench][0] && st < p[bench][1]).length;
+    document.getElementById("frontRead").innerHTML =
+      `<div><span class="lbl">Accuracy</span><b class="good">${sa.toFixed(1)}%</b><em>base ${ba.toFixed(1)}%</em></div>` +
+      `<div><span class="lbl">Tokens</span><b>${fmt(st)}</b><em>base ${fmt(bt)}</em></div>` +
+      `<div><span class="lbl">vs. base</span><b class="${da >= 0 ? "good" : ""}">${da >= 0 ? "+" : "−"}${Math.abs(da).toFixed(1)} pts</b><em>${dt <= 0 ? "−" : "+"}${Math.abs(dt).toFixed(1)}% tokens</em></div>` +
+      `<div><span class="lbl">Other methods</span><b class="${beats === 4 ? "good" : ""}">${beats} / 4</b><em>beaten on both axes</em></div>`;
+    const front = !dominated(rhoI, bench);
+    document.getElementById("frontNote").innerHTML = front
+      ? `DECS weight <b>${RHO[rhoI]}</b> is on the frontier for ${["AIME 2024", "AIME 2025", "HMMT 2025"][bench]}: no other weight is both more accurate and shorter.`
+      : `DECS weight ${RHO[rhoI]} is dominated on ${["AIME 2024", "AIME 2025", "HMMT 2025"][bench]}: another weight is at least as accurate with fewer tokens.`;
+  }
+
+  /* ---------------------------------------------------------- 05 token budget */
+  function drawBudget() {
+    const box = document.getElementById("chartBudget");
+    const narrow = box.clientWidth < 560;
+    const h = narrow ? 280 : 340, padL = 44, padR = 24, padT = 22, padB = 44;
+    const [s, w] = canvasFor(box, h);
+    const fx = (i) => padL + 20 + (i / 3) * (w - padL - padR - 40);
+    const fy = (v) => padT + (1 - v / 90) * (h - padT - padB);
+    ticks(0, 90, 30).forEach((v) => { el("line", { x1: padL, x2: w - padR, y1: fy(v), y2: fy(v), class: "grid" }, s); text(s, padL - 8, fy(v) + 4, `${v}`, "ax", "", "end"); });
+    ["4K", "8K", "16K", "32K"].forEach((t, i) => text(s, fx(i), h - padB + 20, t, "ax", "", "middle"));
+    text(s, w - padR, h - 6, "TOKEN CAP →", "ax", "", "end");
+    text(s, padL, padT - 8, "AIME 2024 ACCURACY (%)", "ax", "", "start");
+    BUDGET.forEach(([n, c, kind, v], si) => {
+      const ours = si === 3;
+      el("polyline", { points: v.map((a, i) => `${fx(i)},${fy(a)}`).join(" "), css: `fill:none;stroke:${col(c)};stroke-width:${ours ? 3.25 : 1.75};stroke-linejoin:round` }, s);
+      v.forEach((a, i) => mark(s, kind, fx(i), fy(a), ours ? 6.5 : 5, c));
+    });
+    BUDGET[3][3].forEach((a, i) => text(s, fx(i) - 10, fy(a) - 12, a.toFixed(1), "val", "fill:var(--accent)", "end"));
+    BUDGET[0][3].forEach((a, i) => i > 0 && i < 3 && text(s, fx(i) + 10, fy(a) + 18, a.toFixed(1), "val", "fill:var(--base)", "start"));
+    box.setAttribute("aria-label", BUDGET.map(([n, , , v]) => `${n}: ${v.map((a) => a.toFixed(1)).join(", ")}% at 4K, 8K, 16K, 32K`).join("; "));
+  }
+
+  /* ---------------------------------------------------------- 06 analysis */
+  function drawComp() {
+    const box = document.getElementById("chartComp");
+    const rowH = 50, top = 22, h = top + rowH * 4 + 6;
+    const [s, w] = canvasFor(box, h);
+    const narrow = w < 460;
+    const nameW = Math.min(132, w * 0.3), x0 = nameW + 10, numW = narrow ? 74 : 118, x1 = w - numW - (narrow ? 34 : 44);
+    const fx = (v) => x0 + (v / 0.45) * (x1 - x0);
+    text(s, x0, 12, "AES", "ax");
+    text(s, w, 12, "ACC · TOKENS", "ax", "", "end");
+    COMP.forEach(([n, aes, acc, tok], i) => {
+      const y = top + i * rowH, ours = i === 3;
+      text(s, nameW, y + 22, n, "lbl", ours ? "font-weight:700;fill:var(--accent)" : "", "end");
+      el("rect", { x: x0, y: y + 6, width: fx(aes) - x0, height: 24, rx: 4, css: `fill:${ours ? "var(--ours)" : "var(--ext)"}` }, s);
+      text(s, fx(aes) + 8, y + 23, aes.toFixed(2), "val", ours ? "fill:var(--accent)" : "fill:var(--ink)");
+      text(s, w, y + 16, `${acc.toFixed(2)}%`, "val", ours ? "fill:var(--accent)" : "fill:var(--ink2)", "end");
+      text(s, w, y + 32, `${fmt(tok)} tok`, "ax", "", "end");
+    });
+    box.setAttribute("aria-label", COMP.map((r) => `${r[0]}: AES ${r[1]}, ${r[2]}%, ${fmt(r[3])} tokens`).join("; "));
+  }
+  function drawAnchors() {
+    const box = document.getElementById("chartAnchors");
+    const h = 300, padL = 44, padR = 18, padT = 22, padB = 40;
+    const [s, w] = canvasFor(box, h);
+    const fx = (v) => padL + ((v - 11500) / 8000) * (w - padL - padR);
+    const fy = (v) => padT + (1 - (v - 51) / 15) * (h - padT - padB);
+    ticks(52, 64, 4).forEach((v) => { el("line", { x1: padL, x2: w - padR, y1: fy(v), y2: fy(v), class: "grid" }, s); text(s, padL - 8, fy(v) + 4, `${v}`, "ax", "", "end"); });
+    ticks(12000, 18000, 2000).forEach((v) => text(s, fx(v), h - padB + 18, `${v / 1000}K`, "ax", "", "middle"));
+    text(s, w - padR, h - 4, "AVG TOKENS →", "ax", "", "end");
+    text(s, padL, padT - 8, "AVG ACCURACY (%)", "ax");
+    const tri = ANCH[7];
+    ANCH.slice(4, 7).forEach((p) => el("line", { x1: fx(p[2]), y1: fy(p[1]), x2: fx(tri[2]), y2: fy(tri[1]), css: "stroke:var(--ours);stroke-width:1.5;stroke-dasharray:4 4;stroke-opacity:.7" }, s));
+    ANCH.forEach(([n, a, t, kind, c, side]) => {
+      const ours = n === "All three";
+      const cc = c === "ours2" ? "seg3" : c;
+      mark(s, kind, fx(t), fy(a), ours ? 8 : 5.5, cc);
+      placeLabel(s, fx(t), fy(a), n, side, ours ? "font-weight:700;fill:var(--accent);font-size:12.5px" : "font-size:12px;fill:var(--ink2)");
+    });
+    box.setAttribute("aria-label", ANCH.map((r) => `${r[0]}: ${r[1]}%, ${fmt(r[2])} tokens`).join("; "));
+  }
+  function drawCost() {
+    const box = document.getElementById("chartCost");
+    const narrow = box.clientWidth < 620;
+    const rowH = narrow ? 76 : 62, top = 8, h = top + rowH * COST.length + 26;
+    const [s, w] = canvasFor(box, h);
+    const nameW = narrow ? 0 : 190, x0 = nameW + 12, x1 = w - 64;
+    const fx = (v) => x0 + (v / 20) * (x1 - x0);
+    ticks(0, 20, 5).forEach((v) => { el("line", { x1: fx(v), x2: fx(v), y1: top, y2: top + rowH * COST.length, class: "grid" }, s); text(s, fx(v), top + rowH * COST.length + 18, `${v} h`, "ax", "", "middle"); });
+    COST.forEach(([n, on, r, ref, an, tr, tot, ratio], i) => {
+      const y = top + i * rowH + (narrow ? 22 : 8);
+      if (narrow) text(s, x0, y - 6, n, "lbl", "font-weight:600");
+      else text(s, nameW, y + 24, n, "lbl", "", "end");
+      el("rect", { x: x0, y, width: fx(on) - x0, height: 16, rx: 3, css: "fill:var(--base)" }, s);
+      text(s, fx(on) + 8, y + 12, on.toFixed(2), "val", "fill:var(--ink2)");
+      let x = x0;
+      [[r, "seg1"], [ref, "seg2"], [an, "seg3"], [tr, "seg4"]].forEach(([v, c]) => { el("rect", { x, y: y + 22, width: fx(v) - x0, height: 16, css: `fill:var(--${c})` }, s); x += fx(v) - x0; });
+      text(s, x + 8, y + 35, `${tot.toFixed(2)}  ·  ${ratio}`, "val", "fill:var(--accent)");
+    });
+    box.setAttribute("aria-label", COST.map((c) => `${c[0]}: online DOPD ${c[1]} GPU-hours, Lightning Weave ${c[6].toFixed(2)} (${c[7]} cheaper)`).join("; "));
+  }
+
+  /* ---------------------------------------------------------- pipeline tiles */
+  function tiles(id, vals, varName) {
+    const box = document.getElementById(id);
+    vals.forEach((t) => { const i = document.createElement("i"); i.style.background = `color-mix(in srgb, var(--${varName}) ${Math.round(18 + t * 82)}%, transparent)`; box.appendChild(i); });
+  }
+  tiles("tilesRoll", [1, 1, 1, 1, 1, 1, 1], "line2");
+  tiles("tilesAcc", [.15, .8, .3, .55, .95, .2, .6], "acc");
+  tiles("tilesEff", [.6, .1, .85, .3, .2, .9, .15], "eff");
+  tiles("tilesW", [.45, .5, .6, .45, .6, .55, .4], "ours");
+
+  /* ---------------------------------------------------------- controls */
+  function bindTabs(id, attr, onPick) {
+    const g = document.getElementById(id);
+    g.addEventListener("click", (e) => {
+      const b = e.target.closest("button"); if (!b) return;
+      g.querySelectorAll("button").forEach((x) => x.setAttribute(attr, String(x === b)));
+      onPick(b);
+    });
+  }
+  bindTabs("tiltTabs", "aria-selected", (b) => { tiltKey = b.dataset.k; drawTilt(); });
+  bindTabs("dumbSeg", "aria-pressed", (b) => { dumbMetric = b.dataset.m; drawDumb(); });
+  bindTabs("benchTabs", "aria-selected", (b) => { bench = +b.dataset.b; drawFront(); });
+  const tt = document.getElementById("tableTabs");
+  STUDENTS.forEach((n) => { const b = document.createElement("button"); b.type = "button"; b.setAttribute("role", "tab"); b.textContent = n; b.setAttribute("aria-selected", String(n === tableStudent)); tt.appendChild(b); });
+  bindTabs("tableTabs", "aria-selected", (b) => { tableStudent = b.textContent; drawTable(); });
+  const rho = document.getElementById("rho"), rhoOut = document.getElementById("rhoOut");
+  rho.addEventListener("input", () => { rhoI = +rho.value; rhoOut.textContent = String(RHO[rhoI]); drawFront(); });
+
+  const draws = [["chartTilt", drawTilt], ["chartDumb", drawDumb], ["chartFront", drawFront], ["chartBudget", drawBudget], ["chartComp", drawComp], ["chartAnchors", drawAnchors], ["chartCost", drawCost]];
+  draws.forEach(([, f]) => f());
+  drawTable();
+  if ("ResizeObserver" in window) {
+    draws.forEach(([id, f]) => {
+      let last = 0;
+      new ResizeObserver((en) => { const w = Math.round(en[0].contentRect.width); if (w && Math.abs(w - last) > 4) { last = w; f(); } }).observe(document.getElementById(id));
+    });
+  }
+
+  /* ---------------------------------------------------------- copy BibTeX */
+  document.getElementById("copyBib").addEventListener("click", () => {
+    const t = document.getElementById("bib").textContent, st = document.getElementById("copyStatus"), btn = document.getElementById("copyBib");
+    const done = (msg) => { btn.textContent = msg; st.textContent = msg; setTimeout(() => (btn.textContent = "Copy"), 1800); };
+    const fallback = () => { const r = document.createRange(); r.selectNodeContents(document.getElementById("bib")); const sel = window.getSelection(); sel.removeAllRanges(); sel.addRange(r); done("Selected, press ⌘C"); };
+    if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(t).then(() => done("Copied"), fallback); else fallback();
+  });
+
+  /* ---------------------------------------------------------- theme */
+  const root = document.documentElement, mq = window.matchMedia("(prefers-color-scheme: dark)");
+  try { const saved = localStorage.getItem("lw-theme"); if (saved === "dark" || saved === "light") root.setAttribute("data-theme", saved); } catch (e) {}
+  const isDark = () => root.getAttribute("data-theme") ? root.getAttribute("data-theme") === "dark" : mq.matches;
+  document.getElementById("themeBtn").addEventListener("click", () => {
+    const next = isDark() ? "light" : "dark";
+    root.setAttribute("data-theme", next);
+    try { localStorage.setItem("lw-theme", next); } catch (e) {}
+    weave.paint(performance.now());
+  });
+
+  /* ---------------------------------------------------------- hero weave canvas */
+  const weave = (function () {
+    const cv = document.getElementById("weave"), ctx = cv.getContext("2d");
+    const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    let W = 0, H = 0, cell = 16, colors = {}, running = false, visible = true, lastT = 0;
+    function readColors() {
+      const cs = getComputedStyle(root);
+      colors = { acc: cs.getPropertyValue("--acc").trim(), eff: cs.getPropertyValue("--eff").trim(), ours: cs.getPropertyValue("--ours").trim() };
+    }
+    function size() {
+      const r = cv.getBoundingClientRect(), d = Math.min(2, window.devicePixelRatio || 1);
+      W = r.width; H = r.height; cv.width = Math.round(W * d); cv.height = Math.round(H * d); ctx.setTransform(d, 0, 0, d, 0, 0);
+      cell = W < 600 ? 13 : 16;
+    }
+    // Rows are token rollouts: odd rows carry the accuracy shift, even rows the
+    // efficiency shift; every fourth column is a weft thread where both meet in green.
+    function paint(t) {
+      readColors();
+      ctx.clearRect(0, 0, W, H);
+      const cols = Math.ceil(W / cell) + 1, rows = Math.ceil(H / cell) + 1, s = t / 1000;
+      for (let r = 0; r < rows; r++) {
+        const isAcc = r % 2 === 0;
+        for (let c = 0; c < cols; c++) {
+          const weft = c % 4 === 0;
+          const v = 0.5 + 0.5 * Math.sin(c * 0.55 + r * 1.7 + s * (isAcc ? 0.9 : -0.7)) * Math.cos(c * 0.13 - s * 0.35 + r * 0.4);
+          ctx.globalAlpha = weft ? 0.18 + 0.32 * v : 0.05 + 0.3 * v * v;
+          ctx.fillStyle = weft ? colors.ours : isAcc ? colors.acc : colors.eff;
+          ctx.fillRect(c * cell + 1.5, r * cell + 1.5, cell - 3, cell - 3);
+        }
+      }
+      ctx.globalAlpha = 1;
+    }
+    function loop(t) {
+      if (!running) return;
+      if (t - lastT > 60) { paint(t); lastT = t; }
+      requestAnimationFrame(loop);
+    }
+    function start() { if (reduce || running || !visible) return; running = true; requestAnimationFrame(loop); }
+    size(); paint(0);
+    if ("IntersectionObserver" in window) new IntersectionObserver((e) => { visible = e[0].isIntersecting; if (visible) start(); else running = false; }).observe(cv);
+    start();
+    window.addEventListener("resize", () => { size(); paint(performance.now()); });
+    mq.addEventListener && mq.addEventListener("change", () => paint(performance.now()));
+    return { paint };
+  })();
+})();
+</script>
+
+</body>
+</html>
