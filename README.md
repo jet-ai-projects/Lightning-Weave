@@ -2,7 +2,8 @@
 
 <div align="center">
   <a href="https://arxiv.org/abs/2609.14708"><img src="https://img.shields.io/static/v1?label=arXiv&message=Lightning-Weave&color=red&logo=arxiv"></a> &ensp;
-  <a href="https://huggingface.co/papers/2609.14708"><img src="https://img.shields.io/static/v1?label=Hugging%20Face&message=Paper&color=yellow&logo=huggingface" alt="Hugging Face Paper"></a>
+  <a href="https://huggingface.co/papers/2609.14708"><img src="https://img.shields.io/static/v1?label=Hugging%20Face&message=Paper&color=yellow&logo=huggingface" alt="Hugging Face Paper"></a> &ensp;
+  <a href="https://jet-ai-projects.github.io/Lightning-Weave/"><img src="https://img.shields.io/static/v1?label=Project&message=Page&color=green" alt="Project Page"></a>
 </div>
 
 <p align="center">
@@ -30,6 +31,7 @@ Lightning Weave is evaluated across Qwen3-1.7B, Qwen3-4B, Qwen3-4B-Thinking-2507
 
 ### News
 
+- \[2026.10\] We release the [project page](https://jet-ai-projects.github.io/Lightning-Weave/) with a one-minute overview video.
 - \[2026.09\] We release the development code for Lightning Weave.
 - \[2026.09\] We release the [paper](https://arxiv.org/abs/2609.14708) on arXiv.
 
